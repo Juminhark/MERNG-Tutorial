@@ -40,7 +40,11 @@ export default {
 
       await Joi.validate(args, signUp, { abortEarly: false })
 
-      return User.create(args)
+      const user = await User.create(args)
+
+      req.session.userId = user.id
+
+      return user
     },
     signIn: async (root, args, { req }, info) => {
       const { userId } = req.session
@@ -60,7 +64,7 @@ export default {
     signOut: (root, args, { req, res }, info) => {
       Auth.checkSignedIn(req)
 
-      return Auth.signOut()
+      return Auth.signOut(res, res)
     }
   }
 }
