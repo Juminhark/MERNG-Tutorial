@@ -1,8 +1,15 @@
 import { ApolloServer } from 'apollo-server-express'
 import express from 'express'
+import session from 'express-session'
+import connectRedis from 'connect-redis'
 import typeDefs from './typeDefs'
 import resolvers from './resolvers'
-import { APP_PORT, IN_PROD, DB_URL } from './config'
+import {
+  DB_URL,
+  APP_PORT, IN_PROD,
+  SESS_NAME, SESS_SECRET, SESS_LIFETIME,
+  REDIS_HOST, REDIS_PORT, REDIS_PASSWORD
+} from './config'
 import mongoose from 'mongoose'
 
 (async () => {
@@ -13,10 +20,33 @@ import mongoose from 'mongoose'
 
     app.disable('x-powered-by')
 
+    const RedisStore = connectRedis(session)
+
+    const store = new RedisStore({
+      host: REDIS_HOST,
+      port: REDIS_PORT,
+      pass: REDIS_PASSWORD,
+      logErrors: true
+    })
+
+    app.use(session({
+      store,
+      name: SESS_NAME,
+      secret: SESS_SECRET,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        maxAge: SESS_LIFETIME,
+        sameSite: true,
+        secure: IN_PROD
+      }
+    }))
+
     const server = new ApolloServer({
       typeDefs,
       resolvers,
-      playground: !IN_PROD
+      playground: !IN_PROD,
+      context: ({ req, res }) => ({ req, res })
     })
 
     server.applyMiddleware({ app })
